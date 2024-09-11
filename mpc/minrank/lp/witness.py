@@ -2,20 +2,19 @@ from utils.prng import PRNG
 import numpy as np
 from .parameters import Parameters
 from .structs import Instance, Witness
-from utils.matrix import matrix_rank
 from sage.all import *
-from arithmetic.field import *
+from utils.ff import *
 
 def expand_extended_witness(params: Parameters, prng: PRNG): 
     is_valid_witness = False
     while (not is_valid_witness):
-        beta = np.zeros([params.r, params.m])
-        mat_e = np.zeros([params.n, params.m])
-        gq = np.zeros((params.r, params.r + 1, params.m))
-        zero = np.zeros(params.m)
+        beta = np.zeros([params.r, params.m], dtype=int)
+        mat_e = np.zeros([params.n, params.m], dtype=int)
+        gq = np.zeros((params.r, params.r + 1, params.m), dtype=int)
+        zero = np.zeros(params.m, dtype=int)
 
         # Sample random g[r][m]
-        g = np.array(vec_rnd(params.q, params.r * params.m, prng)) \
+        g = np.array(vec_rnd(params.q, params.r * params.m, prng), dtype=int) \
                 .reshape(params.r, params.m)
         is_valid_witness = True
         for i in range(params.r):
@@ -51,30 +50,25 @@ def expand_extended_witness(params: Parameters, prng: PRNG):
 
         # Build the low-rank matrix mat_e
         for i in range(params.n):
-            comb = np.array(vec_rnd(params.q, params.r, prng))
+            comb = np.array(vec_rnd(params.q, params.r, prng), dtype=int)
             for j in range(params.r):
                 mat_e[i] = vec_muladd(mat_e[i], comb[j], g[j])
 
-        print('Rank (Numpy):\t', np.linalg.matrix_rank(mat_e))
-        print('Rank (Sage):\t', matrix(getFq(), mat_e.tolist()).rank())
-        print('Rank (Custom):\t', matrix_rank(mat_e.copy()))
-        print('2E:', 2*matrix(getFq(), mat_e.tolist()))
-
         # Build the vector x
-        x = np.array(vec_rnd(params.q, params.k, prng))
+        x = np.array(vec_rnd(params.q, params.k, prng), dtype=int)
 
     wtn = Witness(x, beta)
     
     return [wtn, mat_e] # [Instance, Witness]
 
 
-def uncompress_instance(params: Parameters, instance: Instance, seed_mats: bytes):
-    if (instance.mats is None):
+def uncompress_instance(params: Parameters, inst: Instance):
+    if (inst.mats is None):
         # Rebuild random context
-        prng = PRNG(params.security, seed_mats)
+        prng = PRNG(params.security, inst.seed_mats)
 
         # Uncompress matrices
-        instance.mats = np.array(vec_rnd(params.q, params.k * params.n * params.m, prng)) \
+        inst.mats = np.array(vec_rnd(params.q, params.k * params.n * params.m, prng), dtype=int) \
                         .reshape((params.k, params.n, params.m))
 
 
@@ -87,16 +81,17 @@ def generate_instance_with_solution(params: Parameters, prng: PRNG):
 
     # Uncompress the instance
     inst = Instance(seed_mats, None, None)
-    uncompress_instance(params, inst, seed_mats)
-    print('E:', mat_e)
-    # print('w(E):', matrix_rank(mat_e))
+    uncompress_instance(params, inst)
+    # print('E:', mat_e)
+    # Fq = getFq()
+    # print('w(E):', matrix(Fq, [vector(Fq, [Fq.from_integer(cell) for cell in row]) for row in mat_e.tolist()]).rank())
 
     # Build m0 := mat_e - sum_i x_i mats_i
-    sum_mt = np.zeros((params.n, params.m), dtype=int)
-    for mt in inst.mats:
-        sum_mt = np.array([[add(sum_mt[i, j], mt[i, j]) for j in range(params.m)] for i in range(params.n)])
-    inst.m0 = np.array([[sub(mat_e[i, j], sum_mt[i, j]) for j in range(params.m)] for i in range(params.n)])
-    print('M0:', inst.m0)
+    # sum_mt = np.zeros((params.n, params.m), dtype=int)
+    # for mt in inst.mats:
+    #     sum_mt = np.array([[add(sum_mt[i, j], mt[i, j]) for j in range(params.m)] for i in range(params.n)])
+    # inst.m0 = np.array([[sub(mat_e[i, j], sum_mt[i, j]) for j in range(params.m)] for i in range(params.n)])
+    inst.m0 = mat_neg(matcols_muladd(mat_neg(mat_e), wtn.x, inst.mats))
     return [inst, wtn] # [Instance, Witness]
 
 
@@ -120,5 +115,25 @@ def deserialize_solution():
     pass
 
 
-def is_correct_solution():
-    pass
+def is_correct_solution(params: Parameters, inst: Instance, wtn: Witness) -> bool:
+    # Uncompress the instance
+    uncompress_instance(params, inst)
+
+    # Recompute the low-rank matrix mat_e
+    mat_e = matcols_muladd(inst.m0, wtn.x, inst.mats)
+
+    is_correct = True
+    for i in range(params.n):
+        # Compute x^{q^j}, for all j>0
+        res = np.zeros(params.m, dtype=int)
+        for j in range(params.r):
+            # res += beta_j * mat_e[i]^{q^j}
+            res = ext_add(res, ext_mul(wtn.beta[j], mat_e[i]))
+            mat_e[i] = ext_powq(mat_e[i])
+        # res += mat_e[i]^{q^r}
+        res = ext_add(res, mat_e[i])
+        # Check if res is zero
+        if False in (np.array(res) == 0):
+            is_correct = False
+            print(f'Error: Coordinate {i} is not a root of the q-polynomial.')
+    return is_correct

@@ -1,10 +1,10 @@
 # import sys
 # from sage.all import *
 from constants import FIELD_SIZE, SECURITY_LEVEL
-from mpc.minrank.fen24lp.parameters import Parameters
-from mpc.minrank.fen24lp.witness import *
+from mpc.minrank.lp.parameters import Parameters
+from mpc.minrank.lp.witness import *
 from utils.prng import PRNG
-from arithmetic.field import *
+from utils.ff import *
 
 # if len(sys.argv) != 2:
 #     print("Usage: %s <n>" % sys.argv[0])
@@ -27,5 +27,6 @@ prng = PRNG(params.security, b'abc', b'abc')
 # print(ext_powq(a))
 
 [inst, wtn] = generate_instance_with_solution(params, prng)
+print(is_correct_solution(params, inst, wtn))
 # print('Instance:', inst)
 # print('Witness:', wtn)

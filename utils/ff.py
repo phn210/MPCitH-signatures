@@ -93,12 +93,19 @@ def vec_to_bytes(x):
 def vec_from_bytes(buf):
     return list(buf)
 
+# Operation in field Fq for matrices
+
+def mat_neg(x: np.ndarray):
+    shape = x.shape
+    return np.array([neg(e) for e in x.flatten()]).reshape(shape)
+
 # z[] += x[1][] * y[1] + ... + x[nb][] * y[nb]
 def matcols_muladd(z, y, x):
-    (num_row, ) = x.shape
+    (k, num_row, num_col) = x.shape
     for i in range(num_row):
-        for j in range(len(y)):
-            z[i][j] = add(z[i][j], mul(y[j], x[i][j]))
+        for l in range(k):
+            for j in range(num_col):
+                z[i][j] = add(z[i][j], mul(y[l], x[l][i][j]))
     return z
 
 # Operations in field extensions Fq^m

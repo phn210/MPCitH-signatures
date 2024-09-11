@@ -1,4 +1,4 @@
-from arithmetic.field import *
+from utils.ff import *
 
 def swap_rows(A, row1, row2):
 	A[row2], A[row1] = A[row1], A[row2]

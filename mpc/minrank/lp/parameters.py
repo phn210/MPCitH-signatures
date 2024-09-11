@@ -1,5 +1,5 @@
 from constants import FIELD_SIZE, SECURITY_LEVEL, SHARING_SCHEME, SIG_VARIANT
-from arithmetic.field import init
+from utils.ff import init
 
 class Parameters:
     def __init__(self, security = SECURITY_LEVEL.L1, field_size = FIELD_SIZE.GF16, sharing_scheme = SHARING_SCHEME.TRAD, variant = SIG_VARIANT.FAST):

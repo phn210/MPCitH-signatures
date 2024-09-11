@@ -1,5 +1,5 @@
 import numpy as np
-from arithmetic.field import *
+from utils.ff import *
 from parameters import Parameters
 from structs import *
 
@@ -33,7 +33,7 @@ class MPC:
                                    has_sharing_offset: bool, entire_computation: bool):
         # Recompute the low-rank matrix mat_e
         mat_e = inst.m0 if has_sharing_offset else np.zeros((self.params.n, self.params.m))
-        # mat_e = matcols_muladd(mat_e, )
+        mat_e = matcols_muladd(mat_e, share.wtn.x, inst.mats)
         br = BroadcastVector()
         chall = ChallengeVector()
         return [br, chall]
