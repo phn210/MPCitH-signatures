@@ -11,9 +11,11 @@ class FIELD_SIZE(Enum):
     GF256 = 256
 
 class SHARING_SCHEME(Enum):
-    TRAD = 'traditional'
-    HCUBE = 'hypercube'
-    TSSS = 'threshold-lsss'
+    LIN_ADD_TRAD = 'linear-additive-traditional'
+    LIN_ADD_HCUBE = 'linear-additive-hypercube'
+    LIN_TMT_STD = 'linear-threshold_mt-standard'
+    LIN_TMT_NFPR = 'linear-threshold_mt-nfpr'
+    # NLIN_...
 
 class SIG_VARIANT(Enum):
     FAST = 'fast'

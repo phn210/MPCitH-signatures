@@ -83,36 +83,9 @@ def generate_instance_with_solution(params: Parameters, prng: PRNG):
     inst = Instance(seed_mats, None, None)
     uncompress_instance(params, inst)
     # print('E:', mat_e)
-    # Fq = getFq()
-    # print('w(E):', matrix(Fq, [vector(Fq, [Fq.from_integer(cell) for cell in row]) for row in mat_e.tolist()]).rank())
-
-    # Build m0 := mat_e - sum_i x_i mats_i
-    # sum_mt = np.zeros((params.n, params.m), dtype=int)
-    # for mt in inst.mats:
-    #     sum_mt = np.array([[add(sum_mt[i, j], mt[i, j]) for j in range(params.m)] for i in range(params.n)])
-    # inst.m0 = np.array([[sub(mat_e[i, j], sum_mt[i, j]) for j in range(params.m)] for i in range(params.n)])
+    # print('w(E):', mat_rank(mat_e))
     inst.m0 = mat_neg(matcols_muladd(mat_neg(mat_e), wtn.x, inst.mats))
     return [inst, wtn] # [Instance, Witness]
-
-
-def hash_update_instance():
-    pass
-
-
-def serialize_instance():
-    pass
-
-
-def deserialize_instance():
-    pass
-
-
-def serialize_solution():
-    pass
-
-
-def deserialize_solution():
-    pass
 
 
 def is_correct_solution(params: Parameters, inst: Instance, wtn: Witness) -> bool:

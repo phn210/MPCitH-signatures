@@ -1,32 +1,27 @@
-# import sys
-# from sage.all import *
-from constants import FIELD_SIZE, SECURITY_LEVEL
+import random
+from constants import *
+from mpc.minrank.lp.mpc import MPC
 from mpc.minrank.lp.parameters import Parameters
-from mpc.minrank.lp.witness import *
+import mpc.minrank.lp.structs as structs
+import mpc.minrank.lp.witness as witness
+from signatures import SignatureScheme
+from signatures.structs import PrivateKey, PublicKey
 from utils.prng import PRNG
-from utils.ff import *
+from utils.trees.seed_tree import SeedTree
 
-# if len(sys.argv) != 2:
-#     print("Usage: %s <n>" % sys.argv[0])
-#     print("Outputs the prime factorization of n.")
-#     sys.exit(1)
-# 
-# print(factor(sage_eval(sys.argv[1])))
+#print(sys.argv)
+key_seed = b'key_seed'
+sig_seed = b'sig_seed'
+salt = b'salt'
+msg = b'test'
+sec = SECURITY_LEVEL.L1
+field = FIELD_SIZE.GF16
+sharing = SHARING_SCHEME.LIN_ADD_TRAD
+variant = SIG_VARIANT.FAST
 
-
-# prng = PRNG(SECURITY_LEVEL.L5, b'seed', b'salt')
-# print(prng.sample(32).hex())
-# print(prng.sample(32).hex())
-# print(prng.sample(32).hex())
-# print(prng.sample(32).hex())
-
-params = Parameters(security=SECURITY_LEVEL.L1, field_size=FIELD_SIZE.GF16)
-prng = PRNG(params.security, b'abc', b'abc')
-
-# a = [1, 0, 13, 4, 6, 0, 1, 7, 9, 2, 3, 11, 10, 12, 15, 1]
-# print(ext_powq(a))
-
-[inst, wtn] = generate_instance_with_solution(params, prng)
-print(is_correct_solution(params, inst, wtn))
-# print('Instance:', inst)
-# print('Witness:', wtn)
+sig_scheme = SignatureScheme(sec, field, sharing, variant, structs, witness, Parameters, MPC)
+[prvKey, pubKey] = sig_scheme.generate_key(key_seed)
+prvKey = PrivateKey.deserialize(prvKey, sig_scheme.params, sig_scheme.structs)
+pubKey = PublicKey.deserialize(pubKey, sig_scheme.params, sig_scheme.structs)
+[sig_bytes, is_correct] = sig_scheme.sign_and_verify(msg, prvKey, pubKey, salt, sig_seed)
+print('Result:', is_correct)

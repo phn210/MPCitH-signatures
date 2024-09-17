@@ -1,26 +1,28 @@
 from constants import SECURITY_LEVEL
-from Crypto.Hash import cSHAKE128, cSHAKE256
+from Crypto.Hash.cSHAKE128 import new as SHAKE128
+from Crypto.Hash.cSHAKE256 import new as SHAKE256
 
 class XOF:
-    instance: hash
-    def __init__(self, security_level: SECURITY_LEVEL, delimited_suffix = b'') -> None:
+    is_initialized = False
+    
+    def __init__(self, security_level: SECURITY_LEVEL, prefix=b''):
         if security_level == SECURITY_LEVEL.L1:
-            self.instance = cSHAKE128
+            self.instance = SHAKE128()
         elif security_level == SECURITY_LEVEL.L3:
-            self.instance = cSHAKE256
+            self.instance = SHAKE256()
         elif security_level == SECURITY_LEVEL.L5:
-            self.instance = cSHAKE256
+            self.instance = SHAKE256()
+        if prefix:
+            self.instance.update(prefix)
+            self.is_initialized = True
 
-        if delimited_suffix == '':
-            pass
-        else:
-            self.delimited_suffix = delimited_suffix
-
-    def initialize(self, prefix = b''):
-        self.xof = self.instance.new(prefix)
+    def initialize(self, prefix=b''):
+        if self.is_initialized:
+            return
+        self.instance.update(prefix)
     
     def update(self, data: bytes):
-        return self.xof.update(data)
+        return self.instance.update(data)
     
     def squeeze(self, byte_len):
-        return self.xof.read(byte_len)
+        return self.instance.read(byte_len)

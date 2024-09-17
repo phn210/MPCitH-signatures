@@ -1,25 +1,30 @@
+from enum import Enum
 from constants import SECURITY_LEVEL
-from Crypto.Hash import SHA3_256, SHA3_384, SHA3_512
+from Crypto.Hash.SHA3_256 import new as SHA3_256
+from Crypto.Hash.SHA3_384 import new as SHA3_384
+from Crypto.Hash.SHA3_512 import new as SHA3_512
 
 class Keccak:
-    def __init__(self, security_level: SECURITY_LEVEL, delimited_suffix = b'') -> None:
+    is_initialized = False
+    
+    def __init__(self, security_level: SECURITY_LEVEL, prefix=b''):
         if security_level == SECURITY_LEVEL.L1:
-            self.instance = SHA3_256
+            self.instance = SHA3_256()
         elif security_level == SECURITY_LEVEL.L3:
-            self.instance = SHA3_384
+            self.instance = SHA3_384()
         elif security_level == SECURITY_LEVEL.L5:
-            self.instance == SHA3_512
-
-        if delimited_suffix == '':
-            pass
-        else:
-            self.delimited_suffix = delimited_suffix
+            self.instance == SHA3_512()
+        if prefix:
+            self.instance.update(prefix)
+            self.is_initialized = True
 
     def initialize(self, prefix = b''):
-        self.hash = self.instance.new(prefix)
+        if self.is_initialized:
+            return
+        self.instance.update(prefix)
     
     def update(self, data: bytes):
-        return self.hash.update(data)
+        return self.instance.update(data)
     
-    def finalize(self, is_hex = True):
-        return self.hash.hexdigest() if is_hex else self.hash.digest()
+    def finalize(self, is_hex = False):
+        return self.instance.hexdigest() if is_hex else self.instance.digest()
