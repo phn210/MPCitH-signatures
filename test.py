@@ -14,14 +14,17 @@ key_seed = b'key_seed'
 sig_seed = b'sig_seed'
 salt = b'salt'
 msg = b'test'
+
 sec = SECURITY_LEVEL.L1
-field = FIELD_SIZE.GF16
+field = FIELD_SIZE.GF251
 sharing = SHARING_SCHEME.LIN_ADD_TRAD
 variant = SIG_VARIANT.FAST
 
 sig_scheme = SignatureScheme(sec, field, sharing, variant, structs, witness, Parameters, MPC)
 [prvKey, pubKey] = sig_scheme.generate_key(key_seed)
+print("Public key's length:", len(pubKey))
 prvKey = PrivateKey.deserialize(prvKey, sig_scheme.params, sig_scheme.structs)
 pubKey = PublicKey.deserialize(pubKey, sig_scheme.params, sig_scheme.structs)
 [sig_bytes, is_correct] = sig_scheme.sign_and_verify(msg, prvKey, pubKey, salt, sig_seed)
+print("Signature's length:", len(sig_bytes))
 print('Result:', is_correct)

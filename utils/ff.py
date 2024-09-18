@@ -59,21 +59,28 @@ def init(q: int, m: int):
         Fq = F256
 
 
-# Operations in field Fq
+### Operations in field Fq ###
+
+def from_int(x):
+    return Fq.from_integer(x)
+
+def to_int(x):
+    return x if is_prime(Fq.order()) else x.to_integer()
+
 def add(x, y):
-    return (Fq.from_integer(x) + Fq.from_integer(y)).to_integer()
+    return to_int((from_int(x) + from_int(y)))
 
 def sub(x, y):
-    return (Fq.from_integer(x) - Fq.from_integer(y)).to_integer()
+    return to_int((from_int(x) - from_int(y)))
 
 def mul(x, y):
-    return (Fq.from_integer(x) * Fq.from_integer(y)).to_integer()
+    return to_int((from_int(x) * from_int(y)))
 
 def neg(x):
-    return (-Fq.from_integer(x)).to_integer()
+    return to_int((-from_int(x)))
 
 def inv(x):
-    return Fq.from_integer(x).inverse().to_integer()
+    return to_int(from_int(x).inverse())
 
 ### Operations in field Fq for vectors ###
 
@@ -92,7 +99,7 @@ def vec_rnd(field: int, size: int, prng: PRNG) -> list:
     bit_len = math.ceil(math.log2(field))
     rands = prng.sample(int(size*bit_len/8))
     rands = bitstring.BitArray(rands).bin
-    return [int(rands[i*bit_len : (i+1)*bit_len], 2) for i in range(size)]
+    return [int(rands[i*bit_len : (i+1)*bit_len], 2) % field for i in range(size)]
 
 def vec_mul(k, x):
     return [mul(k, x[i]) for i in range(len(x))]
@@ -114,7 +121,7 @@ def vec_from_bytes(buf):
 ### Operation in field Fq for matrices ###
 
 def mat_rank(x):
-    return matrix(Fq, [vector(Fq, [Fq.from_integer(cell) for cell in row]) for row in x.tolist()]).rank()
+    return matrix(Fq, [vector(Fq, [from_int(cell) for cell in row]) for row in x.tolist()]).rank()
 
 def mat_neg(x: np.ndarray):
     shape = x.shape
@@ -134,10 +141,10 @@ def matcols_muladd(z, y, x):
 def vector_to_element(vec: list[int]):
     # Length of vector must equal to order of the extension
     assert len(vec) == M
-    return sum(Fq.from_integer(vec[i]) * Fq_m.gen()**i for i in range(M))
+    return sum(from_int(vec[i]) * Fq_m.gen()**i for i in range(M))
 
 def element_to_vector(ele):
-    vec = [int(e.to_integer()) for e in ele.list()]
+    vec = [int(to_int(e)) for e in ele.list()]
     # Length of vector must equal to order of the extension
     assert len(vec) == M
     return vec
