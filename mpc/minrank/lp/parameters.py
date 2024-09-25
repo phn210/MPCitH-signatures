@@ -41,7 +41,7 @@ class Parameters:
                 self.m = 12
                 self.k = 55
                 self.r = 5
-                self.eta = 2
+                self.eta = 1
                 if 'traditional' in sharing_scheme.value.split('-'):
                     self.nb_execs = 17
                     self.nb_parties = 256
