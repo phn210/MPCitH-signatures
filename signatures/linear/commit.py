@@ -1,10 +1,12 @@
 from utils.keccak import Keccak
+from utils.benchmark import benchmark
 
 class CommitmentScheme:
     def __init__(self, params):
         self.params = params
 
     # Commitment x1
+    @benchmark
     def commit_share(self, share: object, salt: bytes, e: int, i: int):
         keccak = Keccak(self.params.security, prefix=self.params.hash_prefix_com.to_bytes(1))
         keccak.update(salt)
@@ -13,6 +15,7 @@ class CommitmentScheme:
         keccak.update(share.serialize(True))
         return keccak.finalize()
 
+    @benchmark
     def commit_seed(self, seed: bytes, salt: bytes, e: int, i: int):
         keccak = Keccak(self.params.security, prefix=self.params.hash_prefix_com.to_bytes(1))
         keccak.update(salt)
@@ -21,6 +24,7 @@ class CommitmentScheme:
         keccak.update(seed)
         return keccak.finalize()
 
+    @benchmark
     def commit_seed_and_aux(self, seed: bytes, wtn: object, corr: object, salt: bytes, e: int, i: int):
         keccak = Keccak(self.params.security, prefix=self.params.hash_prefix_com.to_bytes(1))
         keccak.update(salt)

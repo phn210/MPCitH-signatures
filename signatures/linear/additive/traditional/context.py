@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import numpy as np
-from utils.ff import *
+import utils.ff as ff
 
 def update_params(params):
     params.nb_packs = params.nb_parties - 1
@@ -65,6 +65,6 @@ def recompose_broadcast(params, broadcast_struct, broadcast: np.ndarray, plain_b
         # Sum all the broadcast shares in "broadcast[hidden_view]"
         for p in range(params.nb_packs):
             if p != hidden_view:
-                br = vec_add(br, broadcast[p].serialize())
-        br = vec_sub(plain_broadcast.serialize(), br)
+                br = ff.vec_add(br, broadcast[p].serialize())
+        br = ff.vec_sub(plain_broadcast.serialize(), br)
         broadcast[hidden_view] = broadcast_struct.deserialize(params, br)

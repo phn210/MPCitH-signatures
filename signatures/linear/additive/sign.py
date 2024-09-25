@@ -5,6 +5,7 @@ from .share import SharingScheme
 from signatures.structs import PrivateKey, PublicKey
 from signatures.view import *
 from utils.keccak import Keccak
+from utils.benchmark import benchmark
 
 @dataclass
 class SignatureProof:
@@ -74,6 +75,7 @@ class Signature:
         return Signature(salt, mpc_challenge_hash, view_challenge_hash, proofs)
 
 
+@benchmark
 def hash_for_mpc_challenge(params, seed_coms: np.ndarray, inst, salt: bytes, msg: bytes):
     keccak = Keccak(params.security, prefix=params.hash_prefix_1st_chall.to_bytes())
     keccak.update(inst.serialize(to_bytes=True))
@@ -83,6 +85,7 @@ def hash_for_mpc_challenge(params, seed_coms: np.ndarray, inst, salt: bytes, msg
     return keccak.finalize()
 
 
+@benchmark
 def hash_for_view_challenge(params, br: np.ndarray, plain_br: np.ndarray, mpc_chall_hash: bytes, salt: bytes, msg: bytes):
     keccak = Keccak(params.security, prefix=params.hash_prefix_2nd_chall.to_bytes())
     for e in range(params.nb_execs):
@@ -96,7 +99,8 @@ def hash_for_view_challenge(params, br: np.ndarray, plain_br: np.ndarray, mpc_ch
     return keccak.finalize()
 
 
-def sign(msg: bytes, prvKey: PrivateKey, salt: bytes, seed: bytes, mpc: object, structs: object) -> bytes:
+@benchmark
+def sign_mpcith(msg: bytes, prvKey: PrivateKey, salt: bytes, seed: bytes, mpc: object, structs: object) -> bytes:
     
     #********************************************
     #**********   PREPARE MPC INPUTS   **********
@@ -143,7 +147,8 @@ def sign(msg: bytes, prvKey: PrivateKey, salt: bytes, seed: bytes, mpc: object, 
     return sig_bytes
 
 
-def verify(sig_bytes: bytes, msg: bytes, pubKey: PublicKey, mpc: object, structs: object) -> bool:
+@benchmark
+def verify_mpcith(sig_bytes: bytes, msg: bytes, pubKey: PublicKey, mpc: object, structs: object) -> bool:
 
     #********************************************
     #**********   PREPARE MPC INPUTS   **********

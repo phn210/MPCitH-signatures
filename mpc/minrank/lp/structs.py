@@ -33,7 +33,6 @@ class Instance:
             Instance.size_seed_mats(params) + Instance.size_m0(params) + Instance.size_mats(params)
 
     def serialize(self, to_bytes=False):
-        print(self.m0)
         if to_bytes:
             return b''.join([self.seed_mats + bytes(self.m0.flatten().tolist())])
         else:
