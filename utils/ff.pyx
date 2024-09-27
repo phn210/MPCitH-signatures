@@ -1,204 +1,223 @@
 import bitstring
 import math
 import numpy as np
-from sage.all import *
-# from sage.rings.finite_rings.finite_field_base
-from utils.ff import Q, M
+cimport numpy as cnp
+from sage.all import GF, polygen, is_prime, matrix, vector
 from utils.prng import PRNG
-from utils.benchmark import benchmark
 
-# global Fq, Fq_m, Q, M
-# global from_int, to_int, vector_to_element, element_to_vector
-# , from_int, to_int
-# Q = q
-# M = m
+# cython: boundscheck=False, wraparound=False
 
-# GF(2) for towers of field extensions
-F2 = GF(2)
-x = polygen(F2)
+cdef class FF:
+    cdef int q, m
+    cdef Fq, Fq_m
 
-if Q == 16:
-    # GF(16) = GF(2)[x]/(x^4 + x + 1)
-    F16 = F2.extension(x**4 + x + 1, 'x')
-    y = polygen(F16)
+    def __init__(self, int q, int m):
+        self.q = q
+        self.m = m
+        
+        # GF(2) for towers of field extensions
+        F2 = GF(2)
+        x = polygen(F2)
 
-    # GF(16**16) = GF(16)[y]/(y^16 + x*y^3 + x^3*y + x^3 + x^2 + x)
-    F16_16 = F16.extension(y**16 + F16.gen()*y**3 + F16.gen()**3*y + F16.gen()**3 + F16.gen()**2 + F16.gen(), 'y')
-    Fq = F16
-    Fq_m = F16_16
-    
-elif Q == 251:
-    F251 = GF(251)
-    y = polygen(F251)
+        if self.q == 16:
+            # GF(16) = GF(2)[x]/(x^4 + x + 1)
+            F16 = F2.extension(x**4 + x + 1, 'x')
+            y = polygen(F16)
 
-    if M == 12:
-        # GF(251**12) = GF(251)[y]/(y^12 + y + 7)
-        F251_12 = F251.extension(y**12 + y + 7, 'y')
-        Fq_m = F251_12
-    elif M == 16:
-        # GF(251**16) = GF(251)[y]/(y^16 + 3*y + 1)
-        F251_16 = F251.extension(y**16 + 3*y + 1, 'y')
-        Fq_m = F251_16
-    Fq = F251
+            # GF(16**16) = GF(16)[y]/(y^16 + x*y^3 + x^3*y + x^3 + x^2 + x)
+            F16_16 = F16.extension(y**16 + F16.gen()*y**3 + F16.gen()**3*y + F16.gen()**3 + F16.gen()**2 + F16.gen(), 'y')
+            self.Fq = F16
+            self.Fq_m = F16_16
+            
+        elif self.q == 251:
+            F251 = GF(251)
+            y = polygen(F251)
 
-elif Q == 256:
-    # GF(256) = GF(2)[x]/(x^8 + x^4 + x^3 + x + 1)
-    F256 = F2.extension(x**8 + x**4 + x**3 + x + 1, 'x')
-    y = polygen(F256)
-    
-    if M == 12:
-        # GF(256**12) = GF(256)[y]/(y^12 + (x^2 + 1)*y^3 + (x + 1)*y^2 + (x^7 + x^6 + x + 1)*y + x^7 + x^3 + x)
-        F256_12 = F256.extension(y**12 + (F256.gen()**2 + 1)*y**3 + (F256.gen() + 1)*y**2 + \
-                                (F256.gen()**7 + F256.gen()**6 + F256.gen() + 1)*y + \
-                                F256.gen()**7 + F256.gen()**3 + F256.gen(), 'y')
-        Fq_m = F256_12
-    elif M == 16:
-        # GF(256**16) = GF(256)[y]/(y^16 + (x^7 + x^4 + x^3 + 1)*y^3 + (x^7 + x^6 + x^5 + x^4 + x^3 + x^2)*y^2 + (x^4 + x^3 + x^2)*y + x^7 + x^5 + x^3)
-        F256_16 = F256.extension(y**16 + (F256.gen()**7 + F256.gen()**4 + F256.gen()**3 + 1)*y**3 + \
-                                (F256.gen()**7 + F256.gen()**6 + F256.gen()**5 + F256.gen()**4 + F256.gen()**3 + F256.gen()**2)*y**2 + \
-                                (F256.gen()**4 + F256.gen()**3 + F256.gen()**2)*y + F256.gen()**7 + F256.gen()**5 + F256.gen()**3, 'y')
-        Fq_m = F256_16
-    Fq = F256
+            if self.m == 12:
+                # GF(251**12) = GF(251)[y]/(y^12 + y + 7)
+                F251_12 = F251.extension(y**12 + y + 7, 'y')
+                self.Fq_m = F251_12
+            elif self.m == 16:
+                # GF(251**16) = GF(251)[y]/(y^16 + 3*y + 1)
+                F251_16 = F251.extension(y**16 + 3*y + 1, 'y')
+                self.Fq_m = F251_16
+            self.Fq = F251
 
-
-### Operations in field Fq ###
-
-def from_int(x):
-    return Fq.from_integer(x)
+        elif self.q == 256:
+            # GF(256) = GF(2)[x]/(x^8 + x^4 + x^3 + x + 1)
+            F256 = F2.extension(x**8 + x**4 + x**3 + x + 1, 'x')
+            y = polygen(F256)
+            
+            if self.m == 12:
+                # GF(256**12) = GF(256)[y]/(y^12 + (x^2 + 1)*y^3 + (x + 1)*y^2 + (x^7 + x^6 + x + 1)*y + x^7 + x^3 + x)
+                F256_12 = F256.extension(y**12 + (F256.gen()**2 + 1)*y**3 + (F256.gen() + 1)*y**2 + \
+                                        (F256.gen()**7 + F256.gen()**6 + F256.gen() + 1)*y + \
+                                        F256.gen()**7 + F256.gen()**3 + F256.gen(), 'y')
+                self.Fq_m = F256_12
+            elif self.m == 16:
+                # GF(256**16) = GF(256)[y]/(y^16 + (x^7 + x^4 + x^3 + 1)*y^3 + (x^7 + x^6 + x^5 + x^4 + x^3 + x^2)*y^2 + (x^4 + x^3 + x^2)*y + x^7 + x^5 + x^3)
+                F256_16 = F256.extension(y**16 + (F256.gen()**7 + F256.gen()**4 + F256.gen()**3 + 1)*y**3 + \
+                                        (F256.gen()**7 + F256.gen()**6 + F256.gen()**5 + F256.gen()**4 + F256.gen()**3 + F256.gen()**2)*y**2 + \
+                                        (F256.gen()**4 + F256.gen()**3 + F256.gen()**2)*y + F256.gen()**7 + F256.gen()**5 + F256.gen()**3, 'y')
+                self.Fq_m = F256_16
+            self.Fq = F256
 
 
-def to_int(x):
-    return x if is_prime(Fq.order()) else x.to_integer()
+    ### Operations in field self.Fq ###
+
+    cdef inline from_int(self, int x):
+        return self.Fq.from_integer(x)
 
 
-def add(x, y):
-    return to_int((from_int(x) + from_int(y)))
+    cdef inline int to_int(self, x):
+        return x if is_prime(self.Fq.order()) else x.to_integer()
 
 
-def sub(x, y):
-    return to_int((from_int(x) - from_int(y)))
+    cdef inline int add(self, int x, int y):
+        return self.to_int((self.from_int(x) + self.from_int(y)))
 
 
-def mul(x, y):
-    return to_int((from_int(x) * from_int(y)))
+    cdef inline int sub(self, int x, int y):
+        return self.to_int((self.from_int(x) - self.from_int(y)))
 
 
-def neg(x):
-    return to_int((-from_int(x)))
+    cdef inline int mul(self, int x, int y):
+        return self.to_int((self.from_int(x) * self.from_int(y)))
 
 
-def inv(x):
-    return to_int(from_int(x).inverse())
-
-### Operations in field Fq for vectors ###
-
-def vec_add(x, y):
-    # assert len(x) == len(y)
-    return [add(x[i], y[i]) for i in range(len(x))]
+    cdef inline int neg(self, int x):
+        return self.to_int((-self.from_int(x)))
 
 
-def vec_sub(x, y):
-    # assert len(x) == len(y)
-    return [sub(x[i], y[i]) for i in range(len(x))]
+    cdef inline int inv(self, int x):
+        return self.to_int(self.from_int(x).inverse())
+
+    ### Operations in field self.Fq for vectors ###
+
+    cpdef int[:] vec_rnd(self, int field, int size, prng):
+        bit_len = math.ceil(math.log2(field))
+        rands = prng.sample(int(size*bit_len/8))
+        rands = bitstring.BitArray(rands).bin
+        return np.array([int(rands[i*bit_len : (i+1)*bit_len], 2) % field for i in range(size)], dtype=np.int32)
+
+    cpdef int[:] vec_add(self, int[:] x, int[:] y):
+        cdef int i
+        cdef int l = len(x)
+        return np.array([self.add(x[i], y[i]) for i in range(l)], dtype=np.int32)
 
 
-def vec_neg(x):
-    return [neg(x[i]) for i in range(len(x))]
+    cpdef int[:] vec_sub(self, int[:] x, int[:] y):
+        cdef int i
+        cdef int l = len(x)
+        return np.array([self.sub(x[i], y[i]) for i in range(l)], dtype=np.int32)
 
 
-def vec_rnd(field: int, size: int, prng: PRNG) -> list:
-    bit_len = math.ceil(math.log2(field))
-    rands = prng.sample(int(size*bit_len/8))
-    rands = bitstring.BitArray(rands).bin
-    return [int(rands[i*bit_len : (i+1)*bit_len], 2) % field for i in range(size)]
+    cpdef int[:] vec_neg(self, int[:] x):
+        cdef int i
+        cdef int l = len(x)
+        return np.array([self.neg(x[i]) for i in range(l)], dtype=np.int32)
 
 
-def vec_mul(k, x):
-    return [mul(k, x[i]) for i in range(len(x))]
+    cpdef int[:] vec_mul(self, int k, int[:] x):
+        cdef int i
+        cdef int l = len(x)
+        return np.array([self.mul(k, x[i]) for i in range(l)], dtype=np.int32)
 
 
-def vec_muladd(y, k, x):
-    # assert len(x) == len(y)
-    return [add(y[i], mul(k, x[i])) for i in range(len(x))]
+    cpdef int[:] vec_muladd(self, int[:] y, int k, int[:] x):
+        cdef int i
+        cdef int l = len(x)
+        return np.array([self.add(y[i], self.mul(k, x[i])) for i in range(l)], dtype=np.int32)
 
 
-def vec_muladd2(y, k, x):
-    # assert len(x) == len(y)
-    return [add(mul(y[i], k), x[i]) for i in range(len(x))]
+    cpdef int[:] vec_muladd2(self, int[:] y, int k, int[:] x):
+        cdef int i
+        cdef int l = len(x)
+        return np.array([self.add(self.mul(y[i], k), x[i]) for i in range(l)], dtype=np.int32)
 
 
-def vec_to_bytes(x):
-    return bytes(x)
+    cpdef bytes vec_to_bytes(self, int[:] x):
+        return bytes(x)
 
 
-def vec_from_bytes(buf):
-    return list(buf)
-
-### Operation in field Fq for matrices ###
-
-def mat_rank(x):
-    return matrix(Fq, [vector(Fq, [from_int(cell) for cell in row]) for row in x.tolist()]).rank()
+    cpdef int[:] vec_from_bytes(self, bytes buf):
+        return list(buf)
 
 
-def mat_neg(x: np.ndarray):
-    shape = x.shape
-    return np.array([neg(e) for e in x.flatten()]).reshape(shape)
+    ### Operation in field self.Fq for matrices ###
 
-# z[] += x[1][] * y[1] + ... + x[nb][] * y[nb]
+    cpdef int mat_rank(self, x):
+        return matrix(self.Fq, [vector(self.Fq, [self.from_int(cell) for cell in row]) for row in x.tolist()]).rank()
 
-def matcols_muladd(z, y, x):
-    (k, num_row, num_col) = x.shape
-    for i in range(num_row):
-        for l in range(k):
+
+    cpdef int[:, ::1] mat_neg(self, const int[:, ::1] x):
+        cdef int num_row, num_col
+        cdef int i, j
+        
+        num_row, num_col = x.shape[0:2]
+        
+        res = np.zeros((num_row, num_col), dtype=np.int32)
+        cdef int[:, ::1] res_view = res
+        
+        for i in range(num_row):
             for j in range(num_col):
-                z[i][j] = add(z[i][j], mul(y[l], x[l][i][j]))
-    return z
-
-### Operations in field extensions Fq^m ###
-
-def vector_to_element(vec: list[int]):
-    # Length of vector must equal to order of the extension
-    # assert len(vec) == M
-    return Fq_m([from_int(e) for e in vec])
+                res_view[i, j] = self.neg(x[i, j])
+        return res_view
 
 
-def element_to_vector(ele):
-    vec = [int(to_int(e)) for e in ele.list()]
-    # Length of vector must equal to order of the extension
-    # assert len(vec) == M
-    return vec
+    cpdef int[:, ::1] matcols_muladd(self, int[:,::1] z, int[::1] y, int[:, :, ::1] x):
+        cdef int k, num_row, num_col
+        cdef int i, l, j
+
+        k, num_row, num_col = x.shape[0:3]
+        res = np.zeros((num_row, num_col), dtype=np.int32)
+        cdef int[:, ::1] res_view = res
+
+        for i in range(num_row):
+            for l in range(k):
+                for j in range(num_col):
+                    res[i, j] = self.add(z[i, j], self.mul(y[l], x[l, i, j]))
+
+        return res_view
 
 
-def ext_eq(vec_a, vec_b):
-    return vector_to_element(vec_a) == vector_to_element(vec_b)
+    ### Operations in field extensions self.Fq^m ###
+
+    cdef inline vector_to_element(self, int[:] vec):
+        return self.Fq_m([self.from_int(e) for e in vec])
 
 
-def ext_powq(vec_a):
-    ele = vector_to_element(vec_a)
-    return element_to_vector(ele ** Q)
+    cdef inline int[:] element_to_vector(self, ele):
+        return np.array([int(self.to_int(e)) for e in ele.list()], dtype=np.int32)
 
 
-def ext_inv(vec_a):
-    ele = vector_to_element(vec_a)
-    return element_to_vector(ele.inverse())
+    cpdef int ext_eq(self, int[:] vec_a, int[:] vec_b):
+        return self.vector_to_element(vec_a) == self.vector_to_element(vec_b)
 
 
-def ext_mul(vec_a, vec_b):
-    return element_to_vector(vector_to_element(vec_a) * vector_to_element(vec_b))
+    cpdef int[:] ext_powq(self, int[:] vec_a):
+        return self.element_to_vector(self.vector_to_element(vec_a) ** self.q)
 
 
-def ext_add(vec_a, vec_b):
-    return element_to_vector(vector_to_element(vec_a) + vector_to_element(vec_b))
+    cpdef int[:] ext_inv(self, int[:] vec_a):
+        return self.element_to_vector(self.vector_to_element(vec_a).inverse())
 
 
-def ext_sub(vec_a, vec_b):
-    return element_to_vector(vector_to_element(vec_a) - vector_to_element(vec_b))
+    cpdef int[:] ext_mul(self, int[:] vec_a, int[:] vec_b):
+        return self.element_to_vector(self.vector_to_element(vec_a) * self.vector_to_element(vec_b))
 
 
-def ext_neg(vec_a):
-    return element_to_vector(- vector_to_element(vec_a))
+    cpdef int[:] ext_add(self, int[:] vec_a, int[:] vec_b):
+        return self.element_to_vector(self.vector_to_element(vec_a) + self.vector_to_element(vec_b))
 
 
-# def ext_zero():
-#    global M
-#    return [0] * M
+    cpdef int[:] ext_sub(self, int[:] vec_a, int[:] vec_b):
+        return self.element_to_vector(self.vector_to_element(vec_a) - self.vector_to_element(vec_b))
+
+
+    cpdef int[:] ext_neg(self, int[:] vec_a):
+        return self.element_to_vector(-self.vector_to_element(vec_a))
+
+
+    cpdef int[:] ext_zero(self):
+        return np.zeros(self.m, dtype=np.int32)

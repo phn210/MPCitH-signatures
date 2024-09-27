@@ -1,5 +1,4 @@
 from constants import FIELD_SIZE, SECURITY_LEVEL, SHARING_SCHEME, SIG_VARIANT
-from utils.ff import init
 
 class Parameters:
     security: SECURITY_LEVEL
@@ -121,4 +120,3 @@ class Parameters:
         self.hash_prefix_2nd_chall = 2
         self.hash_prefix_mt = 3
         self.hash_prefix_seed_tree = 3
-        init(self.q, self.m)

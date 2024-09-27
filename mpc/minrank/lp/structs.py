@@ -6,14 +6,14 @@ import numpy as np
 @dataclass
 class Instance:
     seed_mats: bytes        # [seed_size]
-    m0: np.ndarray | None   # [n][m]
+    m0: np.ndarray          # [n][m]
     mats: np.ndarray | None # [k][n][m]
 
     @classmethod
     def empty(cls, params):
-        return Instance(np.zeros(params.seed_size, dtype=int),
-                        np.zeros((params.n, params.m), dtype=int), 
-                        np.zeros((params.k, params.n, params.m), dtype=int))
+        return Instance(np.zeros(params.seed_size, dtype=np.int32),
+                        np.zeros((params.n, params.m), dtype=np.int32), 
+                        np.zeros((params.k, params.n, params.m), dtype=np.int32))
 
     @classmethod
     def size_seed_mats(cls, params):
@@ -36,11 +36,12 @@ class Instance:
         if to_bytes:
             return b''.join([self.seed_mats + bytes(self.m0.flatten().tolist())])
         else:
-            return list(self.seed_mats) + self.m0.flatten().tolist()
+            return np.array(list(self.seed_mats) + self.m0.flatten().tolist(), dtype=np.int32)
         
     @classmethod
     def deserialize(cls, params, data: bytes):
-        return Instance(data[:params.seed_size], np.array(list(data)[params.seed_size:]).reshape((params.n, params.m)), None)
+        return Instance(data[:params.seed_size], np.array(list(data)[params.seed_size:],
+                        dtype=np.int32).reshape((params.n, params.m)), None)
     
     # def hash_update(self, update_func):
     #     update_func(self.serialize(True))
@@ -56,7 +57,7 @@ class Witness:
 
     @classmethod
     def empty(cls, params):
-        return Witness(np.zeros(params.k, dtype=int), np.zeros((params.r, params.m), dtype=int))
+        return Witness(np.zeros(params.k, dtype=np.int32), np.zeros((params.r, params.m), dtype=np.int32))
 
     @classmethod
     def size_x(cls, params):
@@ -72,13 +73,13 @@ class Witness:
     
     def serialize(self, to_bytes=False):
         ele_list = self.x.flatten().tolist() + self.beta.flatten().tolist()
-        return bytes(ele_list) if to_bytes else ele_list
+        return bytes(ele_list) if to_bytes else np.array(ele_list, dtype=np.int32)
     
     @classmethod
     def deserialize(cls, params, data):
         data = list(data)
-        return Witness(np.array(data[:params.k]), 
-                       np.array(data[params.k:]).reshape((params.r, params.m)))
+        return Witness(np.array(data[:params.k], dtype=np.int32), 
+                       np.array(data[params.k:], dtype=np.int32).reshape((params.r, params.m)))
 
 
 @dataclass
@@ -87,7 +88,7 @@ class UniformVector:
 
     @classmethod
     def empty(cls, params):
-        return UniformVector(np.zeros((params.r, params.eta, params.m), dtype=int))
+        return UniformVector(np.zeros((params.r, params.eta, params.m), dtype=np.int32))
 
     @classmethod
     def size_a(cls, params):
@@ -99,12 +100,12 @@ class UniformVector:
     
     def serialize(self, to_bytes=False):
         ele_list = self.a.flatten().tolist()
-        return bytes(ele_list) if to_bytes else ele_list
+        return bytes(ele_list) if to_bytes else np.array(ele_list, dtype=np.int32)
     
     @classmethod
     def deserialize(cls, params, data):
         data = list(data)
-        return UniformVector(np.array(list(data)).reshape((params.r, params.eta, params.m)))
+        return UniformVector(np.array(list(data), dtype=np.int32).reshape((params.r, params.eta, params.m)))
 
 
 @dataclass
@@ -113,7 +114,7 @@ class CorrelatedVector:
 
     @classmethod
     def empty(cls, params):
-        return CorrelatedVector(np.zeros((params.eta, params.m), dtype=int))
+        return CorrelatedVector(np.zeros((params.eta, params.m), dtype=np.int32))
 
     @classmethod
     def size_c(cls, params):
@@ -125,12 +126,12 @@ class CorrelatedVector:
     
     def serialize(self, to_bytes=False):
         ele_list = self.c.flatten().tolist()
-        return bytes(ele_list) if to_bytes else ele_list
+        return bytes(ele_list) if to_bytes else np.array(ele_list, dtype=np.int32)
     
     @classmethod
     def deserialize(cls, params, data):
         data = list(data)
-        return CorrelatedVector(np.array(data).reshape((params.eta, params.m)))
+        return CorrelatedVector(np.array(data, dtype=np.int32).reshape((params.eta, params.m)))
 
 
 @dataclass
@@ -140,8 +141,8 @@ class ChallengeVector:
 
     @classmethod
     def empty(cls, params):
-        return ChallengeVector(np.zeros((params.n, params.eta, params.m), dtype=int),
-                               np.zeros((params.eta, params.m), dtype=int))
+        return ChallengeVector(np.zeros((params.n, params.eta, params.m), dtype=np.int32),
+                               np.zeros((params.eta, params.m), dtype=np.int32))
 
     @classmethod
     def size_gamma(cls, params):
@@ -157,13 +158,13 @@ class ChallengeVector:
     
     def serialize(self, to_bytes=False):
         ele_list = self.gamma.flatten().tolist() + self.eps.flatten().tolist()
-        return bytes(ele_list) if to_bytes else ele_list
+        return bytes(ele_list) if to_bytes else np.array(ele_list, dtype=np.int32)
     
     @classmethod
     def deserialize(cls, params, data):
         data = list(data)
-        return ChallengeVector(np.array(data[:params.n * params.eta * params.m]).reshape((params.n, params.eta, params.m)), 
-                               np.array(data[params.n * params.eta * params.m:]).reshape((params.eta, params.m)))
+        return ChallengeVector(np.array(data[:params.n * params.eta * params.m], dtype=np.int32).reshape((params.n, params.eta, params.m)), 
+                               np.array(data[params.n * params.eta * params.m:], dtype=np.int32).reshape((params.eta, params.m)))
 
 
 @dataclass
@@ -173,8 +174,8 @@ class BroadcastVector:
 
     @classmethod
     def empty(cls, params):
-        return BroadcastVector(np.zeros((params.r, params.eta, params.m), dtype=int),
-                               np.zeros((params.eta, params.m), dtype=int))
+        return BroadcastVector(np.zeros((params.r, params.eta, params.m), dtype=np.int32),
+                               np.zeros((params.eta, params.m), dtype=np.int32))
 
     @classmethod
     def size_alpha(cls, params):
@@ -190,13 +191,13 @@ class BroadcastVector:
     
     def serialize(self, to_bytes=False, v_excluded=False):
         ele_list = self.alpha.flatten().tolist() + self.v.flatten().tolist() if not v_excluded else self.alpha.flatten().tolist()
-        return bytes(ele_list) if to_bytes else ele_list
+        return bytes(ele_list) if to_bytes else np.array(ele_list, dtype=np.int32)
     
     @classmethod
     def deserialize(cls, params, data):
         data = list(data)
-        return BroadcastVector(np.array(data[:params.r * params.eta * params.m]).reshape((params.r, params.eta, params.m)), 
-                               np.array(data[params.r * params.eta * params.m:]).reshape((params.eta, params.m)))
+        return BroadcastVector(np.array(data[:params.r * params.eta * params.m], dtype=np.int32).reshape((params.r, params.eta, params.m)), 
+                               np.array(data[params.r * params.eta * params.m:], dtype=np.int32).reshape((params.eta, params.m)))
     
     # def hash_update(self, update_func, v_excluded=False):
     #     update_func(bytes(self.alpha.flatten().tolist()))
@@ -238,7 +239,7 @@ class Share:
             out = []
             for sublist in ele_list:
                 out.extend(sublist)
-            return out
+            return np.array(out, dtype=np.int32)
         
     @classmethod
     def deserialize(cls, params, data):

@@ -8,14 +8,10 @@ from signatures.structs import PrivateKey, PublicKey
 from tests.test_case_0 import *
 from utils.log.table import *
 from utils.benchmark import log
-from setuptools import setup
-from Cython.Build import cythonize
+from setup import cythonize_extensions
 
-setup(
-    ext_modules = cythonize("utils/ff.pyx")
-)
+cythonize_extensions()
 
-#print(sys.argv)
 key_seed = b'key_seed'
 sig_seed = b'sig_seed'
 salt = b'salt'

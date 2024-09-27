@@ -1,5 +1,8 @@
 # Cython
 *.c
+*.pyx.backup
+*.html
+
 
 .vscode
 

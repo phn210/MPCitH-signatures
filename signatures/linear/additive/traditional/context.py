@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 import numpy as np
-import utils.ff as ff
 
 def update_params(params):
     params.nb_packs = params.nb_parties - 1
@@ -59,7 +58,7 @@ def has_sharing_offset_for(hidden_view, p) -> bool:
     return p == hidden_view
 
 
-def recompose_broadcast(params, broadcast_struct, broadcast: np.ndarray, plain_broadcast, hidden_view: int):
+def recompose_broadcast(params, broadcast_struct, broadcast: np.ndarray, plain_broadcast, hidden_view: int, ff):
     if(hidden_view != params.nb_parties-1):
         br = broadcast[hidden_view].serialize()
         # Sum all the broadcast shares in "broadcast[hidden_view]"
