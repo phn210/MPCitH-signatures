@@ -8,9 +8,9 @@ from signatures.structs import PrivateKey, PublicKey
 from tests.test_case_0 import *
 from utils.log.table import *
 from utils.benchmark import log
-from setup import cythonize_extensions
+# from setup import cythonize_extensions
 
-cythonize_extensions()
+# cythonize_extensions()
 
 key_seed = b'key_seed'
 sig_seed = b'sig_seed'

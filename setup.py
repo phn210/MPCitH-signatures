@@ -27,8 +27,7 @@ def cythonize_extensions():
                 'wraparound': False,    # Disable negative indexing
                 'nonecheck': False,     # Disable none checking
             }
-        ),
-        include_dirs=[np.get_include()],
+        )
     )
 
-# cythonize_extensions()
+cythonize_extensions()

@@ -4,9 +4,10 @@ from .parameters import Parameters
 from .structs import Instance, Witness
 from utils.prng import PRNG
 from utils.benchmark import benchmark
+import utils.ff_c as ff
 
 @benchmark
-def expand_extended_witness(params: Parameters, prng: PRNG, ff): 
+def expand_extended_witness(params: Parameters, prng: PRNG): 
     is_valid_witness = False
     while (not is_valid_witness):
         beta = np.zeros([params.r, params.m], dtype=np.int32)
@@ -64,7 +65,7 @@ def expand_extended_witness(params: Parameters, prng: PRNG, ff):
 
 
 @benchmark
-def uncompress_instance(params: Parameters, inst: Instance, ff):
+def uncompress_instance(params: Parameters, inst: Instance):
     if (inst.mats is None):
         # Rebuild random context
         prng = PRNG(params.security, inst.seed_mats)
@@ -75,16 +76,16 @@ def uncompress_instance(params: Parameters, inst: Instance, ff):
 
 
 @benchmark
-def generate_instance_with_solution(params: Parameters, prng: PRNG, ff):
+def generate_instance_with_solution(params: Parameters, prng: PRNG):
     # Extended Witness -> x, beta, mat_e
-    [wtn, mat_e] = expand_extended_witness(params, prng, ff)
+    [wtn, mat_e] = expand_extended_witness(params, prng)
 
     # Sample a seed for random matrices
     seed_mats = prng.sample(params.seed_size)
 
     # Uncompress the instance
     inst = Instance(seed_mats, None, None)
-    uncompress_instance(params, inst, ff)
+    uncompress_instance(params, inst)
     # print('E:', mat_e)
     # print('w(E):', mat_rank(mat_e))
     inst.m0 = np.array(ff.mat_neg(ff.matcols_muladd(ff.mat_neg(mat_e), wtn.x, inst.mats)), dtype=np.int32) \
@@ -92,9 +93,9 @@ def generate_instance_with_solution(params: Parameters, prng: PRNG, ff):
     return [inst, wtn] # [Instance, Witness]
 
 
-def is_correct_solution(params: Parameters, inst: Instance, wtn: Witness, ff) -> bool:
+def is_correct_solution(params: Parameters, inst: Instance, wtn: Witness) -> bool:
     # Uncompress the instance
-    uncompress_instance(params, inst, ff)
+    uncompress_instance(params, inst)
 
     # Recompute the low-rank matrix mat_e
     mat_e = ff.matcols_muladd(inst.m0, wtn.x, inst.mats)
@@ -105,7 +106,7 @@ def is_correct_solution(params: Parameters, inst: Instance, wtn: Witness, ff) ->
         res = np.zeros(params.m, dtype=np.int32)
         for j in range(params.r):
             # res += beta_j * mat_e[i]^{q^j}
-            res = ff.ext_add(res, ff.ext_mul(wtn.beta[j], mat_e[i]))
+            res = ff.ext_add(res.ext_mul(wtn.beta[j], mat_e[i]))
             mat_e[i] = ff.ext_powq(mat_e[i])
         # res += mat_e[i]^{q^r}
         res = ff.ext_add(res, mat_e[i])

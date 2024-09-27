@@ -106,7 +106,7 @@ def sign_mpcith(msg: bytes, prvKey: PrivateKey, salt: bytes, seed: bytes, mpc: o
     #********************************************
     params = mpc.params
     salt = b''.join([salt, b'\0' * max(params.salt_size - len(salt), 0)])[:params.salt_size]
-    sharing_scheme = SharingScheme(params, seed, salt, structs, mpc.ff)
+    sharing_scheme = SharingScheme(params, seed, salt, structs)
     [packing_ctxs, plain_unif, plain_corr, seed_trees, seed_coms, last_shares] = sharing_scheme.generate_shares(mpc, prvKey.wtn)
     mpc_challenge_seed = hash_for_mpc_challenge(params, seed_coms, prvKey.inst, salt, msg)
     challenges = mpc.expand_mpc_challenge_hash(mpc_challenge_seed, prvKey.inst)
@@ -154,7 +154,7 @@ def verify_mpcith(sig_bytes: bytes, msg: bytes, pubKey: PublicKey, mpc: object, 
     #********************************************
     params = mpc.params
     sig = Signature.deserialize(sig_bytes, mpc.params, structs)
-    sharing_scheme = SharingScheme(params, None, sig.salt, structs, mpc.ff)
+    sharing_scheme = SharingScheme(params, None, sig.salt, structs)
     challenges = mpc.expand_mpc_challenge_hash(sig.mpc_challenge_hash, pubKey.inst)
     hidden_views = expand_view_challenge_hash(params, sig.view_challenge_hash, 1)
 
@@ -171,7 +171,7 @@ def verify_mpcith(sig_bytes: bytes, msg: bytes, pubKey: PublicKey, mpc: object, 
         for p in range(params.nb_packs):
             broadcast[e][p] = mpc.mpc_compute_communications(challenges[e], recomputing_ctxs[e].packed_shares[p], plain_broadcast[e], 
                                                              pubKey.inst, sharing_scheme.has_sharing_offset_for(hidden_view, p))
-        sharing_scheme.recompose_broadcast(broadcast[e], plain_broadcast[e], hidden_view, mpc.ff)
+        sharing_scheme.recompose_broadcast(broadcast[e], plain_broadcast[e], hidden_view)
 
 
     #********************************************
