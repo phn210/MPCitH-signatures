@@ -8,12 +8,13 @@ import utils.ff_c as ff
 
 class SignatureScheme:
     def __init__(self, security: SECURITY_LEVEL.L1, field_size: FIELD_SIZE, sharing_scheme: SHARING_SCHEME, variant: SIG_VARIANT, 
-                 struct_module, witness_module, param_class, mpc_class):
+                 struct_module, witness_module, param_class, mpc):
         self.structs = struct_module
         self.witness_module = witness_module
         self.params = param_class(security, field_size, sharing_scheme, variant)
         ff.init(self.params.q, self.params.m)
-        self.mpc = mpc_class(self.params)
+        self.mpc = mpc
+        self.mpc.init(self.params)
         if sharing_scheme.value.split('-')[-2] == 'additive':
             self.sign_algo = additive_sign
         elif sharing_scheme.value.split('-')[-2] == 'threshold_mt':
@@ -34,7 +35,7 @@ class SignatureScheme:
     def sign(self, msg: bytes, prvKey: PrivateKey, salt: bytes, seed: bytes) -> bytes:
         # print('Signing...')
         self.witness_module.uncompress_instance(self.params, prvKey.inst)
-        sig_bytes = self.sign_algo.sign_mpcith(msg, prvKey, salt, seed, self.mpc, self.structs)
+        sig_bytes = self.sign_algo.sign_mpcith(self.params, msg, prvKey, salt, seed, self.mpc, self.structs)
         # print('Done!')
         return sig_bytes
     
@@ -42,18 +43,12 @@ class SignatureScheme:
     def verify(self, msg: bytes, pubKey: PublicKey, sig: bytes) -> bool:
         # print('Verifying...')
         self.witness_module.uncompress_instance(self.params, pubKey.inst)
-        is_correct = self.sign_algo.verify_mpcith(sig, msg, pubKey, self.mpc, self.structs)
+        is_correct = self.sign_algo.verify_mpcith(self.params, sig, msg, pubKey, self.mpc, self.structs)
         # print('Done!')
         return is_correct
     
     @benchmark
     def sign_and_verify(self, msg: bytes, prvKey: PrivateKey, pubKey: PublicKey, salt: bytes, seed: bytes):
-        self.witness_module.uncompress_instance(self.params, prvKey.inst)
-        self.witness_module.uncompress_instance(self.params, pubKey.inst)
-        # print('Signing...')
-        sig_bytes = self.sign_algo.sign_mpcith(msg, prvKey, salt, seed, self.mpc, self.structs)
-        # print('Done!')
-        # print('Verifying...')
-        is_correct = self.sign_algo.verify_mpcith(sig_bytes, msg, pubKey, self.mpc, self.structs)
-        # print('Done!')
+        sig_bytes = self.sign(msg, prvKey, salt, seed)
+        is_correct = self.verify(msg, pubKey, sig_bytes)
         return [sig_bytes, is_correct]

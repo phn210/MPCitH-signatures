@@ -2,7 +2,7 @@
 cdef int Q, M
 cdef Fq, Fq_m
 
-cpdef init(int q, int m)
+cpdef void init(int q, int m)
 
 ### Operations in field Fq for vectors ###
 cpdef int[::1] vec_rnd(const int field, const int size, prng)

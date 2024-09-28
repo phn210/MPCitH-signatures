@@ -1,13 +1,13 @@
 from constants import *
-from mpc.minrank.lp.mpc import MPC
+from mpc.minrank.lp import mpc_c as MPC
+from mpc.minrank.lp import structs
+from mpc.minrank.lp import witness
 from mpc.minrank.lp.parameters import Parameters
-import mpc.minrank.lp.structs as structs
-import mpc.minrank.lp.witness as witness
 from signatures import SignatureScheme
 from signatures.structs import PrivateKey, PublicKey
 from tests.test_case_0 import *
 from utils.log.table import *
-from utils.benchmark import log
+import utils.benchmark as benchmark
 # from setup import cythonize_extensions
 
 # cythonize_extensions()
@@ -17,25 +17,23 @@ sig_seed = b'sig_seed'
 salt = b'salt'
 msg = b'test'
 
-headers = ['Security Level', 'Field Size', 'Sharing Scheme', 'Variant', 'Public Key Length', 'Signature Length', 'Result']
+headers = ['Security Level', 'Field Size', 'Sharing Scheme', 'Variant',
+            'Public Key Length', 'Signature Length', 'Result',
+            'Sign', 'Verify', 'Total']
 table = []
-
-i = 0
-for test_case in test_cases:
-    row = [test_case.sec, test_case.field, test_case.sharing, test_case.variant]
+for i, test_case in enumerate(test_cases):
+    row = [test_case.sec.value, test_case.field.value, test_case.sharing.value, test_case.variant.value if test_case.variant else 'none']
     sig_scheme = SignatureScheme(test_case.sec, test_case.field, test_case.sharing, test_case.variant,
                                  structs, witness, Parameters, MPC)
     [prvKey, pubKey] = sig_scheme.generate_key(key_seed)
-    row += [len(pubKey)]
+    row += [str(len(pubKey)) + 'B']
     prvKey = PrivateKey.deserialize(prvKey, sig_scheme.params, sig_scheme.structs)
     pubKey = PublicKey.deserialize(pubKey, sig_scheme.params, sig_scheme.structs)
-    # sig_bytes = sig_scheme.sign(msg, prvKey, salt, sig_seed)
-    # is_correct = sig_scheme.verify(msg, pubKey, sig_bytes)
     [sig_bytes, is_correct] = sig_scheme.sign_and_verify(msg, prvKey, pubKey, salt, sig_seed)
-    row += [len(sig_bytes), is_correct]
+    row += [str(len(sig_bytes)) + 'B', is_correct]
+    row += [str(round(benchmark.get(e)['avg_time'], 3)) + 's' for e in ['sign', 'verify', 'sign_and_verify']]
     table.append(row)
     print(f'Finish test case {i}')
-    i+=1
-    log(reset=True)
+    benchmark.reset()
 
-log_table_from_rows(headers, table)
+log_table_from_rows(headers, table, 'benchmark.md')

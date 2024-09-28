@@ -1,6 +1,5 @@
 # Cython
 *.c
-*.pyx.backup
 *.html
 
 

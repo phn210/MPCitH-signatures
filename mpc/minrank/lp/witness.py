@@ -6,7 +6,7 @@ from utils.prng import PRNG
 from utils.benchmark import benchmark
 import utils.ff_c as ff
 
-@benchmark
+# @benchmark
 def expand_extended_witness(params: Parameters, prng: PRNG): 
     is_valid_witness = False
     while (not is_valid_witness):
@@ -64,7 +64,7 @@ def expand_extended_witness(params: Parameters, prng: PRNG):
     return [wtn, mat_e] # [Instance, Witness]
 
 
-@benchmark
+# @benchmark
 def uncompress_instance(params: Parameters, inst: Instance):
     if (inst.mats is None):
         # Rebuild random context
@@ -75,7 +75,7 @@ def uncompress_instance(params: Parameters, inst: Instance):
                         .reshape((params.k, params.n, params.m))
 
 
-@benchmark
+# @benchmark
 def generate_instance_with_solution(params: Parameters, prng: PRNG):
     # Extended Witness -> x, beta, mat_e
     [wtn, mat_e] = expand_extended_witness(params, prng)

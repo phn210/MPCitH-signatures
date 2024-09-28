@@ -8,7 +8,7 @@ from utils.prng import PRNG
 cdef int Q, M
 cdef Fq, Fq_m
 
-cpdef init(int q, int m):
+cpdef void init(int q, int m):
     global Q
     global M
     global Fq, Fq_m

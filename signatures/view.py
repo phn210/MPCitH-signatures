@@ -2,7 +2,7 @@ import numpy as np
 from utils.prng import PRNG
 from utils.benchmark import benchmark
 
-@benchmark
+# @benchmark
 def expand_view_challenge_hash(params, digest: bytes, nb_views: int):
     prng = PRNG(params.security, digest)
     views = np.zeros((params.nb_execs, nb_views), dtype=np.int32)

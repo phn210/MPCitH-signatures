@@ -91,7 +91,7 @@ class MPC:
 
     @benchmark
     def mpc_compute_communications_inverse(self, chall: ChallengeVector, share: Share, br: BroadcastVector, plain_br: BroadcastVector, inst: Instance,
-                                   has_sharing_offset: bool) -> BroadcastVector:
+                                   has_sharing_offset: bool):
         # Recompute the low-rank matrix mat_e
         mat_e = inst.m0 if has_sharing_offset else np.zeros((self.params.n, self.params.m))
         mat_e = ff.matcols_muladd(mat_e, share.wtn.x, inst.mats)
@@ -123,6 +123,7 @@ class MPC:
         for i in range(self.params.r):
             for k in range(self.params.eta):
                 share.corr.c[k] = ff.ext_sub(share.corr.c[k], ff.ext_mul(plain_br.alpha[i][k], share.wtn.beta[i]))
+        
 
 
     @benchmark

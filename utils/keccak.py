@@ -13,7 +13,7 @@ class Keccak:
         elif security_level == SECURITY_LEVEL.L3:
             self.instance = SHA3_384()
         elif security_level == SECURITY_LEVEL.L5:
-            self.instance == SHA3_512()
+            self.instance = SHA3_512()
         if prefix:
             self.instance.update(prefix)
             self.is_initialized = True

@@ -74,7 +74,7 @@ class Signature:
         return Signature(salt, mpc_challenge_hash, view_challenge_hash, proofs)
 
 
-@benchmark
+# @benchmark
 def hash_for_mpc_challenge(params, seed_coms: np.ndarray, inst, salt: bytes, msg: bytes):
     keccak = Keccak(params.security, prefix=params.hash_prefix_1st_chall.to_bytes())
     keccak.update(inst.serialize(to_bytes=True))
@@ -84,7 +84,7 @@ def hash_for_mpc_challenge(params, seed_coms: np.ndarray, inst, salt: bytes, msg
     return keccak.finalize()
 
 
-@benchmark
+# @benchmark
 def hash_for_view_challenge(params, br: np.ndarray, plain_br: np.ndarray, mpc_chall_hash: bytes, salt: bytes, msg: bytes):
     keccak = Keccak(params.security, prefix=params.hash_prefix_2nd_chall.to_bytes())
     for e in range(params.nb_execs):
@@ -98,13 +98,12 @@ def hash_for_view_challenge(params, br: np.ndarray, plain_br: np.ndarray, mpc_ch
     return keccak.finalize()
 
 
-@benchmark
-def sign_mpcith(msg: bytes, prvKey: PrivateKey, salt: bytes, seed: bytes, mpc: object, structs: object) -> bytes:
+# @benchmark
+def sign_mpcith(params, msg: bytes, prvKey: PrivateKey, salt: bytes, seed: bytes, mpc: object, structs: object) -> bytes:
     
     #********************************************
     #**********   PREPARE MPC INPUTS   **********
     #********************************************
-    params = mpc.params
     salt = b''.join([salt, b'\0' * max(params.salt_size - len(salt), 0)])[:params.salt_size]
     sharing_scheme = SharingScheme(params, seed, salt, structs)
     [packing_ctxs, plain_unif, plain_corr, seed_trees, seed_coms, last_shares] = sharing_scheme.generate_shares(mpc, prvKey.wtn)
@@ -124,8 +123,8 @@ def sign_mpcith(msg: bytes, prvKey: PrivateKey, salt: bytes, seed: bytes, mpc: o
         plain_broadcast[e] = structs.BroadcastVector.empty(params)
         plain_broadcast[e] = mpc.mpc_compute_plain_broadcast(challenges[e], plain_share, plain_broadcast[e], prvKey.inst)
         for p in range(params.nb_packs):
-            broadcast[e][p] = mpc.mpc_compute_communications(challenges[e], packing_ctxs[e].packed_shares[p], plain_broadcast[e], 
-                                                             prvKey.inst, False)
+            broadcast[e][p] = mpc.mpc_compute_communications(challenges[e], packing_ctxs[e].packed_shares[p], \
+                                                             plain_broadcast[e], prvKey.inst, False)
 
     #********************************************
     #**********   PROVE HIDDEN VIEWS   **********
@@ -146,14 +145,13 @@ def sign_mpcith(msg: bytes, prvKey: PrivateKey, salt: bytes, seed: bytes, mpc: o
     return sig_bytes
 
 
-@benchmark
-def verify_mpcith(sig_bytes: bytes, msg: bytes, pubKey: PublicKey, mpc: object, structs: object) -> bool:
+# @benchmark
+def verify_mpcith(params, sig_bytes: bytes, msg: bytes, pubKey: PublicKey, mpc: object, structs: object) -> bool:
 
     #********************************************
     #**********   PREPARE MPC INPUTS   **********
     #********************************************
-    params = mpc.params
-    sig = Signature.deserialize(sig_bytes, mpc.params, structs)
+    sig = Signature.deserialize(sig_bytes, params, structs)
     sharing_scheme = SharingScheme(params, None, sig.salt, structs)
     challenges = mpc.expand_mpc_challenge_hash(sig.mpc_challenge_hash, pubKey.inst)
     hidden_views = expand_view_challenge_hash(params, sig.view_challenge_hash, 1)
@@ -169,7 +167,7 @@ def verify_mpcith(sig_bytes: bytes, msg: bytes, pubKey: PublicKey, mpc: object, 
     for e in range(params.nb_execs):
         hidden_view = hidden_views[e][0]
         for p in range(params.nb_packs):
-            broadcast[e][p] = mpc.mpc_compute_communications(challenges[e], recomputing_ctxs[e].packed_shares[p], plain_broadcast[e], 
+            broadcast[e][p] = mpc.mpc_compute_communications(challenges[e], recomputing_ctxs[e].packed_shares[p], plain_broadcast[e], \
                                                              pubKey.inst, sharing_scheme.has_sharing_offset_for(hidden_view, p))
         sharing_scheme.recompose_broadcast(broadcast[e], plain_broadcast[e], hidden_view)
 
@@ -181,7 +179,5 @@ def verify_mpcith(sig_bytes: bytes, msg: bytes, pubKey: PublicKey, mpc: object, 
     view_challenge_seed = hash_for_view_challenge(params, broadcast, plain_broadcast, mpc_challenge_seed, sig.salt, msg)
     check_1 = (mpc_challenge_seed == sig.mpc_challenge_hash)
     check_2 = (view_challenge_seed == sig.view_challenge_hash)
-    # print(f'First challenge check: {mpc_challenge_seed} == {sig.mpc_challenge_hash}:', check_1)
-    # print(f'Second challenge check: {view_challenge_seed} == {sig.view_challenge_hash}:', check_2)
 
     return check_1 and check_2

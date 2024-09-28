@@ -21,7 +21,7 @@ class SharingScheme:
         self.commitment = CommitmentScheme(self.params)
 
 
-    @benchmark
+    # @benchmark
     def generate_shares(self, mpc, plain_wtn):
         seed_trees = np.array([SeedTree(self.params) for i in range(self.params.nb_execs)], dtype=object)
         seed_coms = np.zeros((self.params.nb_execs, self.params.nb_parties), dtype=object)
@@ -66,8 +66,7 @@ class SharingScheme:
                     raw_acc_wtn = acc.wtn.serialize()
                     last_wtn = ff.vec_sub(raw_plain_wtn, raw_acc_wtn)
                     
-                    plain_corr[e] = mpc.compute_correlated(plain_wtn, 
-                                    self.struct_module.UniformVector.deserialize(self.params, raw_plain_unif))
+                    plain_corr[e] = mpc.compute_correlated(plain_wtn, self.struct_module.UniformVector.deserialize(self.params, raw_plain_unif))
                     raw_plain_corr = plain_corr[e].serialize()
                     raw_acc_corr = acc.corr.serialize()
                     last_corr = ff.vec_sub(raw_plain_corr, raw_acc_corr)
@@ -82,7 +81,7 @@ class SharingScheme:
         return [packing_ctxs, plain_unif, plain_corr, seed_trees, seed_coms, last_shares]
 
 
-    @benchmark
+    # @benchmark
     def recompute_shares(self, hidden_views: list, proofs: np.ndarray):
         seed_trees = np.array([SeedTree(self.params) for i in range(self.params.nb_execs)], dtype=object)
         seed_coms = np.zeros((self.params.nb_execs, self.params.nb_parties), dtype=object)
@@ -128,7 +127,7 @@ class SharingScheme:
         return self.share_ctx.has_sharing_offset_for(hidden_view, p)
 
 
-    @benchmark
+    # @benchmark
     def recompose_broadcast(self, broadcast: np.ndarray, plain_broadcast: object, hidden_view: int):
         return self.share_ctx.recompose_broadcast(self.params, self.struct_module.BroadcastVector, 
                                                   broadcast, plain_broadcast, hidden_view)
